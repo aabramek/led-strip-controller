@@ -22,7 +22,9 @@ int main(void)
 	sei();
 	TIMSK = (1 << TOIE0);
 	OCR1AH = OCR1BH = 0;
-	OCR1AL = OCR1BL = OCR2 = 128;
+	OCR1AL = 128;
+	OCR1BL = 0;
+	OCR2 = 0;
 	DDRB = (1 << DDRB1) | (1 << DDRB2) | (1 << DDRB3);
 	TCCR1A = (1 << COM1A1) | (1 << COM1B1) | (1 << WGM10);
 	TCCR1B = (1 << WGM12) | (1 << CS11) | (1 << CS10);
