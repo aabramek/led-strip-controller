@@ -1,5 +1,6 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <avr/eeprom.h>
 
 #include <util/delay.h>
 #include <util/atomic.h>
@@ -17,28 +18,27 @@ uint8_t ReadNEC(unsigned int* address, unsigned int* command);
 
 unsigned int ReadNECBit(void);
 
+void SaveConfigToEEPROM(void);
+
+void LoadConfigFromEEPROM(void);
+
 int main(void)
 {
 	sei();
 	TIMSK = (1 << TOIE0);
 	OCR1AH = OCR1BH = 0;
-	OCR1AL = 128;
+	/*OCR1AL = 128;
 	OCR1BL = 0;
-	OCR2 = 0;
+	OCR2 = 0;*/
+	LoadConfigFromEEPROM();
 	DDRB = (1 << DDRB1) | (1 << DDRB2) | (1 << DDRB3);
 	TCCR1A = (1 << COM1A1) | (1 << COM1B1) | (1 << WGM10);
 	TCCR1B = (1 << WGM12) | (1 << CS11) | (1 << CS10);
 	TCCR2 = (1 << WGM21) | (1 << WGM20) | (1 << COM21) | (1 << CS22);
 	unsigned int address = 0;
 	unsigned int command = 0;
-	enum Color
-	{
-		red,
-		green,
-		blue
-	};
-	enum Color color = red;
-	enum Color color_current = red;
+	enum Color { red, green, blue } color, color_current;
+	color = color_current = red;
 	uint8_t value = 0;
 	while (1)
 	{
@@ -71,6 +71,12 @@ int main(void)
 			case 0x42BD: value = 188; break;
 			case 0x4AB5: value = 224; break;
 			case 0x52AD: value = 255; break;
+			case 0x22DD:
+				LoadConfigFromEEPROM();
+			break;
+			case 0x02FD:
+				SaveConfigToEEPROM();
+			break;
 		}
 		switch (color)
 		{
@@ -160,6 +166,24 @@ unsigned int ReadNECBit(void)
 	while (InputState() == 1);
 	time = TimerStop();
 	return time > 1300 ? 1 : 0;
+}
+
+void SaveConfigToEEPROM(void)
+{
+	eeprom_busy_wait();
+	eeprom_write_byte((uint8_t*)1, OCR1AL);
+	eeprom_busy_wait();
+	eeprom_write_byte((uint8_t*)2, OCR1BL);
+	eeprom_busy_wait();
+	eeprom_write_byte((uint8_t*)3, OCR2);
+}
+
+void LoadConfigFromEEPROM(void)
+{
+	eeprom_busy_wait();
+	OCR1AL = eeprom_read_byte((uint8_t*)1);
+	OCR1BL = eeprom_read_byte((uint8_t*)2);
+	OCR2 = eeprom_read_byte((uint8_t*)3);
 }
 
 ISR(TIMER0_OVF_vect)
